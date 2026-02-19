@@ -9,6 +9,7 @@ Environment variables (set in manager/docker-compose.yaml):
   HOST_IP           — IP / hostname shown to teams in their dashboard URL
 """
 
+import logging
 import os
 import re
 import sqlite3
@@ -17,12 +18,13 @@ import threading
 import time
 from contextlib import contextmanager
 from functools import wraps
-from urllib.request import urlopen
-from urllib.error import URLError
 
 import bcrypt
 from flask import (Flask, flash, redirect, render_template,
                    request, session, url_for)
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s [%(levelname)s] %(message)s')
 
 # ---------------------------------------------------------------------------
 # Config
@@ -104,12 +106,17 @@ def _compose_env(port: int) -> dict:
 
 def docker_up(team_name: str, port: int):
     """Start CTF containers for a team (non-blocking; status set to 'starting')."""
-    subprocess.run(
+    result = subprocess.run(
         ['docker', 'compose', '-p', f'ctf_{team_name}',
-         '-f', CTF_COMPOSE_FILE, 'up', '--no-build', '-d'],
+         '-f', CTF_COMPOSE_FILE, 'up', '-d'],
         env=_compose_env(port),
-        check=False,
+        capture_output=True, text=True,
     )
+    if result.returncode != 0:
+        logging.error('docker_up failed for %s (port %s):\nSTDOUT: %s\nSTDERR: %s',
+                      team_name, port, result.stdout, result.stderr)
+    else:
+        logging.info('docker_up started containers for team %s on port %s', team_name, port)
 
 
 def docker_down(team_name: str, port: int):
@@ -122,20 +129,39 @@ def docker_down(team_name: str, port: int):
     )
 
 
-def _poll_until_ready(team_name: str, port: int, timeout: int = 120):
-    """Background thread: poll the team's web URL until it returns HTTP 200."""
-    url = f'http://{HOST_IP}:{port}'
+def _web_container_running(team_name: str) -> bool:
+    """Return True if the team's web container is in 'running' state."""
+    project = f'ctf_{team_name}'
+    result = subprocess.run(
+        ['docker', 'ps',
+         '--filter', f'name={project}-web',
+         '--filter', 'status=running',
+         '--format', '{{.Names}}'],
+        capture_output=True, text=True, timeout=10,
+    )
+    return project in result.stdout
+
+
+def _poll_until_ready(team_name: str, port: int, timeout: int = 180):
+    """Background thread: poll via Docker socket until the web container is running.
+
+    Replaces the previous HTTP-based poll which failed on remote servers where
+    NAT loopback is not available (manager container cannot reach HOST_IP:PORT).
+    """
     deadline = time.time() + timeout
+    logging.info('Polling started for team %s (timeout %ss)', team_name, timeout)
     while time.time() < deadline:
         try:
-            with urlopen(url, timeout=3) as resp:
-                if resp.status == 200:
-                    set_team_status(team_name, 'ready')
-                    return
-        except (URLError, OSError):
-            pass
+            if _web_container_running(team_name):
+                # Give Apache a moment to finish binding before marking ready
+                time.sleep(2)
+                set_team_status(team_name, 'ready')
+                logging.info('Team %s is ready', team_name)
+                return
+        except Exception as exc:
+            logging.warning('Poll check error for %s: %s', team_name, exc)
         time.sleep(5)
-    # Timed out — mark as error so admin knows
+    logging.error('Team %s timed out waiting for web container', team_name)
     set_team_status(team_name, 'error')
 
 
