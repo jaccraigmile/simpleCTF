@@ -24,6 +24,8 @@
         <th>Team</th>
         <th>Port</th>
         <th>Status</th>
+        <th>Score</th>
+        <th>Flags</th>
         <th>Created</th>
         <th>Actions</th>
       </tr>
@@ -35,6 +37,8 @@
         <td class="mono">{{ team.name }}</td>
         <td class="mono">{{ team.port }}</td>
         <td><span class="badge {{ team.status }}">{{ team.status }}</span></td>
+        <td style="color:var(--green); font-weight:bold;">{{ team.score }}</td>
+        <td class="muted">{{ team.captures }}/5</td>
         <td class="muted" style="font-size:0.8rem;">{{ team.created_at }}</td>
         <td style="white-space:nowrap;">
           {% if team.status != 'stopped' %}

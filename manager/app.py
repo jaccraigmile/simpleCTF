@@ -3,10 +3,13 @@ CTF Manager — Flask web app that manages per-team Docker CTF instances.
 
 Environment variables (set in manager/docker-compose.yaml):
   ADMIN_TOKEN       — token required to access /admin routes
-  CTF_COMPOSE_FILE  — HOST path to project/docker-compose.yaml
+  CTF_COMPOSE_FILE  — compose file path inside the manager container
+  CHALLENGE_DIR     — absolute host path to challenge/ (for --project-directory)
   SECRET_KEY        — Flask session signing key
   PORT_RANGE_START  — first port to assign to teams (default 8000)
   HOST_IP           — IP / hostname shown to teams in their dashboard URL
+  FLAG_INSPECTED, FLAG_LOGIN, FLAG_CREDENTIAL_HARVESTER,
+  FLAG_ADMIN_ACCESS, FLAG_FILE_UPLOAD — correct flag values for submission scoring
 """
 
 import logging
@@ -16,6 +19,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 
@@ -45,6 +49,24 @@ HOST_IP          = os.environ.get('HOST_IP', '127.0.0.1')
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'manager.db')
 
 # ---------------------------------------------------------------------------
+# Flag config
+# ---------------------------------------------------------------------------
+
+FLAGS = [
+    {'id': 'FLAG_INSPECTED',            'name': 'Inspect the Source',    'points': 100},
+    {'id': 'FLAG_LOGIN',                'name': 'Initial Access',         'points': 100},
+    {'id': 'FLAG_CREDENTIAL_HARVESTER', 'name': 'Credential Harvester',   'points': 100},
+    {'id': 'FLAG_ADMIN_ACCESS',         'name': 'Admin Access',           'points': 100},
+    {'id': 'FLAG_FILE_UPLOAD',          'name': 'File Upload RCE',        'points': 100},
+]
+MAX_SCORE = sum(f['points'] for f in FLAGS)
+
+
+def _flag_value(flag_id: str) -> str:
+    """Return the env-var value for a flag, or empty string if unset."""
+    return os.environ.get(flag_id, '')
+
+# ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------
 
@@ -59,6 +81,15 @@ def init_db():
                 port          INTEGER UNIQUE NOT NULL,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status        TEXT DEFAULT 'starting'
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS submissions (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_name    TEXT NOT NULL,
+                flag_id      TEXT NOT NULL,
+                captured_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(team_name, flag_id)
             )
         """)
         conn.commit()
@@ -100,6 +131,59 @@ def next_free_port() -> int:
         port += 1
     return port
 
+
+def get_team_submissions(team_name: str) -> set:
+    """Return the set of flag_ids already captured by this team."""
+    with get_db() as db:
+        rows = db.execute(
+            'SELECT flag_id FROM submissions WHERE team_name = ?', (team_name,)
+        ).fetchall()
+    return {r['flag_id'] for r in rows}
+
+
+def record_submission(team_name: str, flag_id: str) -> bool:
+    """Insert a submission. Returns True on success, False if already captured."""
+    try:
+        with get_db() as db:
+            db.execute(
+                'INSERT INTO submissions (team_name, flag_id) VALUES (?, ?)',
+                (team_name, flag_id)
+            )
+            db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+
+def get_scoreboard() -> list:
+    """Return all teams ranked by score desc, last capture asc."""
+    with get_db() as db:
+        team_rows = db.execute('SELECT name, status FROM teams ORDER BY name').fetchall()
+        sub_rows  = db.execute(
+            'SELECT team_name, flag_id, captured_at FROM submissions'
+        ).fetchall()
+
+    subs: dict = defaultdict(list)
+    for s in sub_rows:
+        subs[s['team_name']].append(s)
+
+    board = []
+    for t in team_rows:
+        team_subs  = subs[t['name']]
+        flag_ids   = {s['flag_id'] for s in team_subs}
+        last_cap   = max((s['captured_at'] for s in team_subs), default=None)
+        score      = sum(f['points'] for f in FLAGS if f['id'] in flag_ids)
+        board.append({
+            'name':         t['name'],
+            'status':       t['status'],
+            'score':        score,
+            'flag_ids':     flag_ids,
+            'last_capture': last_cap,
+        })
+
+    board.sort(key=lambda r: (-r['score'], r['last_capture'] or '9999-99-99'))
+    return board
+
 # ---------------------------------------------------------------------------
 # Docker helpers
 # ---------------------------------------------------------------------------
@@ -112,8 +196,6 @@ def _compose_cmd(team_name: str) -> list:
     """Build the base `docker compose` command with correct file + project-directory."""
     cmd = ['docker', 'compose', '-p', f'ctf_{team_name}', '-f', CTF_COMPOSE_FILE]
     if CHALLENGE_DIR:
-        # --project-directory tells compose to resolve relative paths (./web/src etc.)
-        # against the host filesystem path, not the container path
         cmd += ['--project-directory', CHALLENGE_DIR]
     return cmd
 
@@ -155,17 +237,12 @@ def _web_container_running(team_name: str) -> bool:
 
 
 def _poll_until_ready(team_name: str, port: int, timeout: int = 180):
-    """Background thread: poll via Docker socket until the web container is running.
-
-    Replaces the previous HTTP-based poll which failed on remote servers where
-    NAT loopback is not available (manager container cannot reach HOST_IP:PORT).
-    """
+    """Background thread: poll via Docker socket until the web container is running."""
     deadline = time.time() + timeout
     logging.info('Polling started for team %s (timeout %ss)', team_name, timeout)
     while time.time() < deadline:
         try:
             if _web_container_running(team_name):
-                # Give Apache a moment to finish binding before marking ready
                 time.sleep(2)
                 set_team_status(team_name, 'ready')
                 logging.info('Team %s is ready', team_name)
@@ -196,7 +273,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 # ---------------------------------------------------------------------------
 # Routes — public
 # ---------------------------------------------------------------------------
@@ -210,11 +286,10 @@ def index():
 
 @app.route('/register', methods=['POST'])
 def register():
-    name     = request.form.get('name', '').strip()
-    password = request.form.get('password', '')
-    password2= request.form.get('password2', '')
+    name      = request.form.get('name', '').strip()
+    password  = request.form.get('password', '')
+    password2 = request.form.get('password2', '')
 
-    # Validate
     if not re.fullmatch(r'[a-zA-Z0-9_-]{1,32}', name):
         flash('Team name must be 1–32 chars: letters, numbers, _ or -.', 'error')
         return redirect(url_for('index'))
@@ -239,7 +314,6 @@ def register():
         flash('Team name already taken — please log in instead.', 'error')
         return redirect(url_for('index'))
 
-    # Start containers in background
     threading.Thread(target=launch_and_poll, args=(name, port), daemon=True).start()
 
     session['team'] = name
@@ -267,7 +341,7 @@ def logout():
     return redirect(url_for('index'))
 
 # ---------------------------------------------------------------------------
-# Routes — team dashboard
+# Routes — team dashboard + flag submission
 # ---------------------------------------------------------------------------
 
 @app.route('/dashboard')
@@ -278,7 +352,49 @@ def dashboard():
         session.clear()
         return redirect(url_for('index'))
     instance_url = f'http://{HOST_IP}:{team["port"]}'
-    return render_template('dashboard.html', team=team, instance_url=instance_url)
+    captured     = get_team_submissions(session['team'])
+    score        = sum(f['points'] for f in FLAGS if f['id'] in captured)
+    return render_template('dashboard.html',
+                           team=team,
+                           instance_url=instance_url,
+                           flags=FLAGS,
+                           captured=captured,
+                           score=score,
+                           max_score=MAX_SCORE)
+
+
+@app.route('/submit', methods=['POST'])
+@login_required
+def submit_flag():
+    team_name = session['team']
+    submitted = request.form.get('flag', '').strip()
+
+    matched_id = None
+    for f in FLAGS:
+        expected = _flag_value(f['id'])
+        if expected and submitted == expected:
+            matched_id = f['id']
+            break
+
+    if matched_id is None:
+        flash('Incorrect flag.', 'error')
+        return redirect(url_for('dashboard'))
+
+    captured = get_team_submissions(team_name)
+    if matched_id in captured:
+        flash('You already captured that flag!', 'info')
+        return redirect(url_for('dashboard'))
+
+    record_submission(team_name, matched_id)
+    flag_name = next(f['name'] for f in FLAGS if f['id'] == matched_id)
+    flash(f'Correct! "{flag_name}" captured — +100 pts', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/scoreboard')
+def scoreboard():
+    board = get_scoreboard()
+    return render_template('scoreboard.html', board=board, flags=FLAGS, max_score=MAX_SCORE)
 
 # ---------------------------------------------------------------------------
 # Routes — admin
@@ -290,8 +406,11 @@ def admin():
     if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         return render_template('admin_login.html'), 403
     teams = get_all_teams()
-    resp = app.make_response(render_template('admin.html', teams=teams))
-    # Persist the token in a cookie so subsequent POSTs carry it
+    for t in teams:
+        captured  = get_team_submissions(t['name'])
+        t['score']    = sum(f['points'] for f in FLAGS if f['id'] in captured)
+        t['captures'] = len(captured)
+    resp = app.make_response(render_template('admin.html', teams=teams, max_score=MAX_SCORE))
     if token:
         resp.set_cookie('admin_token', token, httponly=True, samesite='Lax')
     return resp
@@ -339,7 +458,6 @@ def admin_restart(team_name):
 # Entry point
 # ---------------------------------------------------------------------------
 
-# Ensure the DB is initialised whenever the module is loaded
 init_db()
 
 if __name__ == '__main__':

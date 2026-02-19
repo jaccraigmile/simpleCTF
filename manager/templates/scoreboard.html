@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Scoreboard — BankingAI CTF{% endblock %}
+
+{% block max_width %}960px{% endblock %}
+
+{% block nav %}
+  <a href="/">Register / Login</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="min-width:600px; overflow-x:auto;">
+  <h1>Scoreboard</h1>
+  <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
+    {{ board|length }} team(s) &mdash; {{ max_score }} pts available &mdash;
+    <a href="/scoreboard" style="font-size:0.82rem;">Refresh</a>
+  </p>
+
+  {% if board %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Team</th>
+        {% for f in flags %}
+          <th style="font-size:0.72rem; max-width:80px;">{{ f.name }}</th>
+        {% endfor %}
+        <th>Score</th>
+        <th>Last Capture</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in board %}
+      <tr>
+        <td class="muted">
+          {% if loop.index == 1 and entry.score > 0 %}
+            &#127881;
+          {% else %}
+            {{ loop.index }}
+          {% endif %}
+        </td>
+        <td class="mono">{{ entry.name }}</td>
+        {% for f in flags %}
+          <td style="text-align:center;">
+            {% if f.id in entry.flag_ids %}
+              <span style="color:var(--green);">&#10003;</span>
+            {% else %}
+              <span class="muted">&mdash;</span>
+            {% endif %}
+          </td>
+        {% endfor %}
+        <td>
+          <span style="color:var(--green); font-weight:bold;">{{ entry.score }}</span>
+          <span class="muted" style="font-size:0.78rem;"> / {{ max_score }}</span>
+        </td>
+        <td class="muted" style="font-size:0.8rem;">
+          {{ entry.last_capture or '&mdash;' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="text-align:center; padding:2rem 0;">
+    No teams registered yet.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

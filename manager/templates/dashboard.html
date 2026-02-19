@@ -34,10 +34,6 @@
       </td>
     </tr>
     <tr>
-      <th>Port</th>
-      <td class="mono">{{ team.port }}</td>
-    </tr>
-    <tr>
       <th>URL</th>
       <td>
         {% if team.status == 'ready' %}
@@ -48,24 +44,63 @@
       </td>
     </tr>
     <tr>
-      <th>Created</th>
-      <td class="muted" style="font-size:0.82rem;">{{ team.created_at }}</td>
+      <th>Score</th>
+      <td>
+        <span style="color:var(--green); font-weight:bold; font-size:1.1rem;">{{ score }}</span>
+        <span class="muted" style="font-size:0.82rem;"> / {{ max_score }} pts</span>
+      </td>
     </tr>
   </table>
 
   {% if team.status == 'starting' %}
-  <div class="flash info">
+  <div class="flash info" style="margin-bottom:1.25rem;">
     Your CTF environment is initialising. The database takes ~30 seconds to start.
     This page will refresh automatically.
   </div>
   {% elif team.status == 'ready' %}
-  <div class="flash success">
+  <div class="flash success" style="margin-bottom:1.25rem;">
     Your instance is live! Open the URL above to begin the challenge.
   </div>
   {% elif team.status == 'stopped' %}
-  <div class="flash error">
+  <div class="flash error" style="margin-bottom:1.25rem;">
     Your instance has been stopped by an admin. Contact the organiser.
   </div>
   {% endif %}
+
+  <!-- Flag progress grid -->
+  <h2>Flags</h2>
+  <table style="margin-top:0.5rem; margin-bottom:1.5rem;">
+    <thead>
+      <tr>
+        <th>Flag</th>
+        <th>Pts</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in flags %}
+      <tr>
+        <td>{{ f.name }}</td>
+        <td class="muted">{{ f.points }}</td>
+        <td>
+          {% if f.id in captured %}
+            <span class="badge ready">&#10003; captured</span>
+          {% else %}
+            <span class="badge stopped">open</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Flag submission -->
+  <h2>Submit a Flag</h2>
+  <form method="POST" action="/submit" style="margin-top:0.5rem;">
+    <label for="flag-input">Flag value</label>
+    <input id="flag-input" type="text" name="flag"
+           placeholder="CTF{...}" autocomplete="off" required>
+    <button type="submit">Submit</button>
+  </form>
 </div>
 {% endblock %}

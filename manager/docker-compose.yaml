@@ -37,3 +37,12 @@ services:
 
       # First port in the range assigned to team instances (inclusive).
       PORT_RANGE_START:  "8000"
+
+      # --- Flag values for submission scoring ---
+      # Set each to match the FLAG_* env vars in challenge/docker-compose.yaml.
+      # Teams submit these strings on their dashboard to score points (100 pts each).
+      FLAG_INSPECTED:            "CTF{change_me}"
+      FLAG_LOGIN:                "CTF{change_me}"
+      FLAG_CREDENTIAL_HARVESTER: "CTF{change_me}"
+      FLAG_ADMIN_ACCESS:         "CTF{change_me}"
+      FLAG_FILE_UPLOAD:          "CTF{change_me}"
