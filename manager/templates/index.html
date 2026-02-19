@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}BankingAI CTF — Register / Login{% endblock %}
+
+{% block max_width %}860px{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
+
+  <!-- Register -->
+  <div class="card" style="flex:1; min-width:280px;">
+    <h1 style="margin-bottom:0.25rem;">Register</h1>
+    <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
+      Create a team to get your own isolated CTF instance.
+    </p>
+    <form method="POST" action="/register">
+      <label for="reg-name">Team name</label>
+      <input id="reg-name" type="text" name="name"
+             placeholder="alpha" maxlength="32"
+             pattern="[a-zA-Z0-9_-]+"
+             title="Letters, numbers, underscores, hyphens only"
+             required>
+      <label for="reg-pass">Password</label>
+      <input id="reg-pass" type="password" name="password"
+             placeholder="choose a password" minlength="8" required>
+      <label for="reg-pass2">Confirm password</label>
+      <input id="reg-pass2" type="password" name="password2"
+             placeholder="repeat password" required>
+      <button type="submit">Register &amp; Launch Instance</button>
+    </form>
+  </div>
+
+  <!-- Divider -->
+  <div style="display:flex; align-items:center; padding:0 0.25rem;">
+    <div style="width:1px; background:var(--border); height:200px; margin:auto;"></div>
+  </div>
+
+  <!-- Login -->
+  <div class="card" style="flex:1; min-width:280px;">
+    <h1 style="margin-bottom:0.25rem;">Login</h1>
+    <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
+      Already registered? Log in to view your instance URL.
+    </p>
+    <form method="POST" action="/login">
+      <label for="login-name">Team name</label>
+      <input id="login-name" type="text" name="name"
+             placeholder="alpha" required>
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" name="password"
+             placeholder="your password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+</div>
+
+<p style="text-align:center; margin-top:1.25rem; font-size:0.8rem; color:var(--muted);">
+  Admin? Access the <a href="/admin">admin panel</a>.
+</p>
+{% endblock %}

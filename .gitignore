@@ -1,0 +1,32 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Windows reserved device names that can't be indexed
+nul
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/
+
+# CTF testing artifacts (never commit pentest output)
+cookies.txt
+admin_cookies.txt
+sqli_output.txt
+admin_out.txt
+admin_panel.txt
+shell.php
+
+# Manager runtime (also covered by manager/.gitignore)
+manager/data/
+manager/__pycache__/
+manager/*.pyc
+
+# Challenge uploads directory
+challenge/web/src/uploads/
+
+# Answer key — keep out of public repos
+challenge/ANSWER_SHEET.md

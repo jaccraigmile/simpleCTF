@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login — CTF Manager{% endblock %}
+
+{% block content %}
+<div class="card" style="min-width:320px;">
+  <h1>Admin Access</h1>
+  <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
+    Enter the admin token to continue.
+  </p>
+  <form method="GET" action="/admin">
+    <label for="token">Admin token</label>
+    <input id="token" type="password" name="token" placeholder="token" required>
+    <button type="submit">Enter</button>
+  </form>
+</div>
+{% endblock %}

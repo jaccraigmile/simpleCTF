@@ -1,0 +1,10 @@
+# SQLite database and any future runtime data
+data/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Local environment overrides
+.env

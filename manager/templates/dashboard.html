@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — {{ team.name }}{% endblock %}
+
+{% block head_extra %}
+{% if team.status == 'starting' %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}
+
+{% block nav %}
+  <span class="muted" style="font-size:0.85rem;">{{ team.name }}</span>
+  <a href="/logout">Logout</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="min-width:340px;">
+  <h1>Your CTF Instance</h1>
+
+  <table style="margin-bottom:1.25rem;">
+    <tr>
+      <th>Team</th>
+      <td class="mono">{{ team.name }}</td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td>
+        <span class="badge {{ team.status }}">{{ team.status }}</span>
+        {% if team.status == 'starting' %}
+          <span class="muted" style="font-size:0.78rem; margin-left:0.5rem;">
+            (refreshing in 5s&hellip;)
+          </span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Port</th>
+      <td class="mono">{{ team.port }}</td>
+    </tr>
+    <tr>
+      <th>URL</th>
+      <td>
+        {% if team.status == 'ready' %}
+          <a href="{{ instance_url }}" target="_blank" rel="noopener">{{ instance_url }}</a>
+        {% else %}
+          <span class="muted">{{ instance_url }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Created</th>
+      <td class="muted" style="font-size:0.82rem;">{{ team.created_at }}</td>
+    </tr>
+  </table>
+
+  {% if team.status == 'starting' %}
+  <div class="flash info">
+    Your CTF environment is initialising. The database takes ~30 seconds to start.
+    This page will refresh automatically.
+  </div>
+  {% elif team.status == 'ready' %}
+  <div class="flash success">
+    Your instance is live! Open the URL above to begin the challenge.
+  </div>
+  {% elif team.status == 'stopped' %}
+  <div class="flash error">
+    Your instance has been stopped by an admin. Contact the organiser.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

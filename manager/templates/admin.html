@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel — CTF Manager{% endblock %}
+
+{% block max_width %}900px{% endblock %}
+
+{% block nav %}
+  <span class="muted" style="font-size:0.85rem;">admin</span>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="min-width:600px; overflow-x:auto;">
+  <h1>Admin Panel</h1>
+  <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
+    {{ teams|length }} team(s) registered &mdash;
+    <a href="/admin" style="font-size:0.82rem;">Refresh</a>
+  </p>
+
+  {% if teams %}
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Team</th>
+        <th>Port</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for team in teams %}
+      <tr>
+        <td class="muted">{{ team.id }}</td>
+        <td class="mono">{{ team.name }}</td>
+        <td class="mono">{{ team.port }}</td>
+        <td><span class="badge {{ team.status }}">{{ team.status }}</span></td>
+        <td class="muted" style="font-size:0.8rem;">{{ team.created_at }}</td>
+        <td style="white-space:nowrap;">
+          {% if team.status != 'stopped' %}
+          <form class="action-form" method="POST"
+                action="/admin/stop/{{ team.name }}"
+                onsubmit="return confirm('Stop + wipe {{ team.name }}?')">
+            <button type="submit" class="danger">Stop</button>
+          </form>
+          {% endif %}
+          &nbsp;
+          <form class="action-form" method="POST"
+                action="/admin/restart/{{ team.name }}"
+                onsubmit="return confirm('Restart {{ team.name }}?')">
+            <button type="submit" class="secondary">Restart</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="text-align:center; padding:2rem 0;">
+    No teams registered yet.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

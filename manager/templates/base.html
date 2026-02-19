@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}BankingAI CTF{% endblock %}</title>
+  {% block head_extra %}{% endblock %}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --green:     #3fb950;
+      --green-dim: #238636;
+      --red:       #f85149;
+      --yellow:    #d29922;
+      --blue:      #58a6ff;
+      --muted:     #8b949e;
+      --text:      #c9d1d9;
+      --heading:   #f0f6fc;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header .logo {
+      color: var(--green);
+      font-size: 1.1rem;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+    }
+
+    header .logo span { color: var(--muted); }
+
+    header nav a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 1.25rem;
+      font-size: 0.85rem;
+      transition: color 0.15s;
+    }
+    header nav a:hover { color: var(--text); }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2rem;
+    }
+
+    h1, h2, h3 { color: var(--heading); }
+    h1 { font-size: 1.4rem; margin-bottom: 1.5rem; }
+    h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+      margin-top: 0.9rem;
+    }
+
+    input[type=text], input[type=password] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 0.5rem 0.75rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type=text]:focus, input[type=password]:focus {
+      border-color: var(--blue);
+    }
+
+    button, .btn {
+      display: inline-block;
+      margin-top: 1.25rem;
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: var(--green-dim);
+      color: var(--heading);
+      border: 1px solid var(--green);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    button:hover, .btn:hover { background: #2ea043; }
+
+    button.danger {
+      background: #21262d;
+      border-color: var(--red);
+      color: var(--red);
+    }
+    button.danger:hover { background: #3d1a1a; }
+
+    button.secondary {
+      background: #21262d;
+      border-color: var(--border);
+      color: var(--text);
+    }
+    button.secondary:hover { background: #30363d; }
+
+    .flash {
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .flash.error   { background: #3d1a1a; border: 1px solid var(--red);    color: var(--red); }
+    .flash.success { background: #0d2818; border: 1px solid var(--green);  color: var(--green); }
+    .flash.info    { background: #0d1f38; border: 1px solid var(--blue);   color: var(--blue); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    .badge.starting { background: #272212; color: var(--yellow); border: 1px solid var(--yellow); }
+    .badge.ready    { background: #0d2818; color: var(--green);  border: 1px solid var(--green); }
+    .badge.stopped  { background: #21262d; color: var(--muted);  border: 1px solid var(--border); }
+    .badge.error    { background: #3d1a1a; color: var(--red);    border: 1px solid var(--red); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #21262d;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .action-form { display: inline; }
+    .action-form button {
+      margin: 0;
+      width: auto;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    a { color: var(--blue); }
+    a:hover { color: var(--text); }
+
+    .mono { font-family: 'Courier New', monospace; }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">BankingAI <span>// CTF Manager</span></div>
+    <nav>
+      {% block nav %}{% endblock %}
+    </nav>
+  </header>
+
+  <main>
+    <div style="width:100%; max-width:{% block max_width %}480px{% endblock %}">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer>&copy; 2026 BankingAI CTF &mdash; for authorised testing only</footer>
+</body>
+</html>

@@ -1,0 +1,34 @@
+services:
+  manager:
+    build: .
+    container_name: ctf_manager
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      # Mount Docker socket so the manager can call `docker compose` on the host
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist the SQLite database across container restarts
+      - ./data:/app/data
+      # Mount the CTF compose file into the container at a fixed path.
+      # CTF_COMPOSE_FILE must point to this *container* path (see note below).
+      - ../challenge/docker-compose.yaml:/ctf/challenge/docker-compose.yaml:ro
+    environment:
+      # --- REQUIRED: change these before running ---
+      SECRET_KEY:        "change-me-to-a-random-string"
+      ADMIN_TOKEN:       "change-me-to-a-secret-token"
+
+      # Path to the CTF compose file *as seen by the Docker daemon on the host*.
+      # Because `docker compose` resolves bind-mount paths relative to the HOST
+      # filesystem (not the manager container), this must be the real host path.
+      #
+      # Example: if your repo lives at /home/user/bankingai-ctf on the host, set:
+      #   CTF_COMPOSE_FILE: /home/user/bankingai-ctf/challenge/docker-compose.yaml
+      CTF_COMPOSE_FILE:  "/home/user/bankingai-ctf/challenge/docker-compose.yaml"
+
+      # IP or hostname teams will use to reach their instance.
+      # Use a LAN IP, public hostname, or 127.0.0.1 for local testing.
+      HOST_IP:           "192.168.1.10"
+
+      # First port in the range assigned to team instances (inclusive).
+      PORT_RANGE_START:  "8000"

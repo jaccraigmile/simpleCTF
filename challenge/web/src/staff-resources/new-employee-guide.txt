@@ -1,0 +1,15 @@
+BankingAI Cloud - New Employee Onboarding
+=========================================
+
+Welcome to the team! Please log in to the employee portal at your earliest convenience.
+
+Your default credentials are:
+
+  Username : ajohnson
+  Password : Staff@2024
+
+You will be prompted to change your password after your first login.
+
+For IT support, contact helpdesk@bankingai.internal.
+
+-- HR Department
