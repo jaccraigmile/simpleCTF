@@ -3,6 +3,11 @@
 {% block title %}Admin Login{% endblock %}
 
 {% block content %}
+<div style="text-align:center; margin-bottom:1.75rem;">
+  <img src="{{ url_for('static', filename='swocts_logo.png') }}" alt="SWOCTS"
+       style="height:60px;width:auto;display:block;margin:0 auto .75rem;">
+  <div style="font-family:var(--disp);font-size:1.0rem;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;">SWOCTS Cybersecurity</div>
+</div>
 <div class="card" style="min-width:320px;">
   <h1 style="margin-bottom:.25rem;">Admin Access</h1>
   <p class="muted" style="font-size:.82rem; margin-bottom:1.5rem;">Restricted area. Authorized personnel only.</p>
