@@ -9,6 +9,7 @@ services:
         condition: service_healthy
     volumes:
       - ./web/src:/var/www/html
+      - uploads:/var/www/html/uploads
     environment:
       FLAG_LOGIN: "${FLAG_LOGIN:-CTF{login_testmode}}"
       FLAG_FILE_UPLOAD: "${FLAG_FILE_UPLOAD:-CTF{file_upload_testmode}}"
@@ -32,3 +33,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+volumes:
+  uploads:
