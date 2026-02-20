@@ -4,11 +4,28 @@
 
 {% block max_width %}960px{% endblock %}
 
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block nav %}
   <a href="/">Register / Login</a>
 {% endblock %}
 
 {% block content %}
+
+{% if graph_data %}
+<div class="card" style="margin-bottom:1.5rem;">
+  <h2 style="margin-bottom:1rem;">
+    Score Over Time
+    <span class="muted" style="font-size:0.75rem; font-weight:normal;">— Eastern Time</span>
+  </h2>
+  <div style="position:relative; height:280px;">
+    <canvas id="scoreChart"></canvas>
+  </div>
+</div>
+{% endif %}
+
 <div class="card" style="min-width:600px; overflow-x:auto;">
   <h1>Scoreboard</h1>
   <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
@@ -66,4 +83,110 @@
   </p>
   {% endif %}
 </div>
+
+{% if graph_data %}
+<script>
+(function () {
+  var raw     = {{ graph_data | tojson }};
+  var teams   = Object.keys(raw);
+  if (!teams.length) return;
+
+  var COLORS = [
+    '#3fb950', '#58a6ff', '#f78166', '#d29922',
+    '#bc8cff', '#79c0ff', '#ffa657', '#ff7b72',
+  ];
+
+  var datasets = teams.map(function (team, i) {
+    return {
+      label:           team,
+      data:            raw[team],
+      borderColor:     COLORS[i % COLORS.length],
+      backgroundColor: COLORS[i % COLORS.length] + '18',
+      fill:            false,
+      stepped:         'before',
+      tension:         0,
+      pointRadius:     4,
+      pointHoverRadius: 7,
+      borderWidth:     2,
+    };
+  });
+
+  new Chart(document.getElementById('scoreChart'), {
+    type: 'line',
+    data: { datasets: datasets },
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      parsing:             false,
+      animation:           false,
+      scales: {
+        x: {
+          type: 'linear',
+          grid:   { color: '#21262d' },
+          border: { color: '#30363d' },
+          ticks: {
+            color: '#8b949e',
+            font:  { family: 'Courier New', size: 11 },
+            maxTicksLimit: 8,
+            callback: function (val) {
+              return new Date(val).toLocaleTimeString('en-US', {
+                timeZone: 'America/New_York',
+                hour:     '2-digit',
+                minute:   '2-digit',
+                hour12:   false,
+              });
+            },
+          },
+        },
+        y: {
+          min:  0,
+          max:  {{ max_score }},
+          grid:   { color: '#21262d' },
+          border: { color: '#30363d' },
+          ticks: {
+            color:    '#8b949e',
+            font:     { family: 'Courier New', size: 11 },
+            stepSize: 100,
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color:    '#c9d1d9',
+            font:     { family: 'Courier New', size: 12 },
+            boxWidth: 12,
+            padding:  16,
+          },
+        },
+        tooltip: {
+          backgroundColor: '#161b22',
+          borderColor:     '#30363d',
+          borderWidth:     1,
+          titleColor:      '#8b949e',
+          bodyColor:       '#c9d1d9',
+          callbacks: {
+            title: function (items) {
+              return new Date(items[0].parsed.x).toLocaleString('en-US', {
+                timeZone: 'America/New_York',
+                month:    'short',
+                day:      'numeric',
+                hour:     '2-digit',
+                minute:   '2-digit',
+                second:   '2-digit',
+                hour12:   false,
+              }) + ' ET';
+            },
+            label: function (item) {
+              return '  ' + item.dataset.label + ': ' + item.parsed.y + ' pts';
+            },
+          },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

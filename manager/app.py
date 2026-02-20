@@ -23,7 +23,9 @@ import threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 import bcrypt
 from flask import (Flask, flash, redirect, render_template,
@@ -49,6 +51,19 @@ PORT_RANGE_START = int(os.environ.get('PORT_RANGE_START', '8000'))
 HOST_IP          = os.environ.get('HOST_IP', '127.0.0.1')
 # Single secret used to derive all per-team flags
 FLAG_SECRET      = os.environ.get('FLAG_SECRET', 'change-me-flag-secret')
+
+TZ = ZoneInfo('America/New_York')
+
+
+def _ts_to_ms(ts_str: str) -> int:
+    """Convert a UTC SQLite timestamp string to Unix milliseconds."""
+    return int(datetime.fromisoformat(ts_str).replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+
+def _ts_to_est(ts_str: str) -> str:
+    """Convert a UTC SQLite timestamp string to an EST/EDT display string."""
+    dt = datetime.fromisoformat(ts_str).replace(tzinfo=timezone.utc).astimezone(TZ)
+    return dt.strftime('%Y-%m-%d %H:%M %Z')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'manager.db')
 
@@ -184,17 +199,18 @@ def get_scoreboard() -> list:
     for t in team_rows:
         team_subs  = subs[t['name']]
         flag_ids   = {s['flag_id'] for s in team_subs}
-        last_cap   = max((s['captured_at'] for s in team_subs), default=None)
-        score      = sum(f['points'] for f in FLAGS if f['id'] in flag_ids)
+        last_cap_utc = max((s['captured_at'] for s in team_subs), default=None)
+        score        = sum(f['points'] for f in FLAGS if f['id'] in flag_ids)
         board.append({
             'name':         t['name'],
             'status':       t['status'],
             'score':        score,
             'flag_ids':     flag_ids,
-            'last_capture': last_cap,
+            'last_capture': _ts_to_est(last_cap_utc) if last_cap_utc else None,
+            '_sort_key':    last_cap_utc or '9999-99-99',
         })
 
-    board.sort(key=lambda r: (-r['score'], r['last_capture'] or '9999-99-99'))
+    board.sort(key=lambda r: (-r['score'], r['_sort_key']))
     return board
 
 # ---------------------------------------------------------------------------
@@ -409,7 +425,32 @@ def submit_flag():
 @app.route('/scoreboard')
 def scoreboard():
     board = get_scoreboard()
-    return render_template('scoreboard.html', board=board, flags=FLAGS, max_score=MAX_SCORE)
+
+    # Build per-team cumulative score time series for the graph
+    with get_db() as db:
+        team_rows = db.execute('SELECT name, created_at FROM teams').fetchall()
+        sub_rows  = db.execute(
+            'SELECT team_name, flag_id, captured_at FROM submissions ORDER BY captured_at'
+        ).fetchall()
+
+    created = {r['name']: r['created_at'] for r in team_rows}
+    subs_by_team: dict = defaultdict(list)
+    for s in sub_rows:
+        subs_by_team[s['team_name']].append(s)
+
+    graph_data = {}
+    for team_name, subs in subs_by_team.items():
+        start_ms = _ts_to_ms(created.get(team_name) or subs[0]['captured_at'])
+        series = [{'x': start_ms, 'y': 0}]
+        score = 0
+        for s in subs:
+            pts = next((f['points'] for f in FLAGS if f['id'] == s['flag_id']), 0)
+            score += pts
+            series.append({'x': _ts_to_ms(s['captured_at']), 'y': score})
+        graph_data[team_name] = series
+
+    return render_template('scoreboard.html', board=board, flags=FLAGS,
+                           max_score=MAX_SCORE, graph_data=graph_data)
 
 # ---------------------------------------------------------------------------
 # Routes — admin

@@ -1,24 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}BankingAI CTF — Register / Login{% endblock %}
-
-{% block max_width %}860px{% endblock %}
+{% block title %}BankingAI CTF{% endblock %}
 
 {% block content %}
-<div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
+<div class="card" style="min-width:320px;">
 
-  <!-- Register -->
-  <div class="card" style="flex:1; min-width:280px;">
-    <h1 style="margin-bottom:0.25rem;">Register</h1>
+  <!-- Tabs -->
+  <div style="display:flex; border-bottom:1px solid var(--border); margin:-2rem -2rem 1.5rem;">
+    <button type="button" id="tab-register"
+            onclick="switchTab('register')"
+            style="flex:1; margin:0; border-radius:6px 0 0 0; border:none;
+                   border-bottom:2px solid var(--green); background:var(--surface);
+                   color:var(--heading); padding:0.65rem;">
+      Register
+    </button>
+    <button type="button" id="tab-login"
+            onclick="switchTab('login')"
+            style="flex:1; margin:0; border-radius:0 6px 0 0; border:none;
+                   border-bottom:2px solid transparent; background:var(--surface);
+                   color:var(--muted); padding:0.65rem;">
+      Login
+    </button>
+  </div>
+
+  <!-- Register form -->
+  <div id="panel-register">
     <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
       Create a team to get your own isolated CTF instance.
     </p>
     <form method="POST" action="/register">
       <label for="reg-name">Team name</label>
       <input id="reg-name" type="text" name="name"
-             placeholder="alpha" maxlength="32"
-             pattern="[a-zA-Z0-9_-]+"
-             title="Letters, numbers, underscores, hyphens only"
+             placeholder="lowercase, no spaces" maxlength="32"
+             pattern="[a-z0-9_-]+"
+             title="Lowercase letters, numbers, underscores, hyphens only"
              required>
       <label for="reg-pass">Password</label>
       <input id="reg-pass" type="password" name="password"
@@ -30,21 +45,15 @@
     </form>
   </div>
 
-  <!-- Divider -->
-  <div style="display:flex; align-items:center; padding:0 0.25rem;">
-    <div style="width:1px; background:var(--border); height:200px; margin:auto;"></div>
-  </div>
-
-  <!-- Login -->
-  <div class="card" style="flex:1; min-width:280px;">
-    <h1 style="margin-bottom:0.25rem;">Login</h1>
+  <!-- Login form -->
+  <div id="panel-login" style="display:none;">
     <p class="muted" style="font-size:0.82rem; margin-bottom:1.25rem;">
-      Already registered? Log in to view your instance URL.
+      Already registered? Log in to view your instance.
     </p>
     <form method="POST" action="/login">
       <label for="login-name">Team name</label>
       <input id="login-name" type="text" name="name"
-             placeholder="alpha" required>
+             placeholder="your team name" required>
       <label for="login-pass">Password</label>
       <input id="login-pass" type="password" name="password"
              placeholder="your password" required>
@@ -52,9 +61,27 @@
     </form>
   </div>
 
+  <p style="text-align:center; margin-top:1.25rem; font-size:0.8rem; color:var(--muted);">
+    Admin? <a href="/admin">Admin panel</a>.
+  </p>
 </div>
 
-<p style="text-align:center; margin-top:1.25rem; font-size:0.8rem; color:var(--muted);">
-  Admin? Access the <a href="/admin">admin panel</a>.
-</p>
+<script>
+  function switchTab(tab) {
+    var isReg = tab === 'register';
+    document.getElementById('panel-register').style.display = isReg ? '' : 'none';
+    document.getElementById('panel-login').style.display    = isReg ? 'none' : '';
+    document.getElementById('tab-register').style.borderBottomColor = isReg ? 'var(--green)' : 'transparent';
+    document.getElementById('tab-register').style.color = isReg ? 'var(--heading)' : 'var(--muted)';
+    document.getElementById('tab-login').style.borderBottomColor = isReg ? 'transparent' : 'var(--green)';
+    document.getElementById('tab-login').style.color = isReg ? 'var(--muted)' : 'var(--heading)';
+  }
+
+  // If a flash message came from a login error, open the login tab
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    {% if 'password' in message.lower() or 'team name' in message.lower() %}
+      switchTab('{{ "login" if "Invalid" in message else "register" }}');
+    {% endif %}
+  {% endfor %}
+</script>
 {% endblock %}
