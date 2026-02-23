@@ -588,6 +588,10 @@ def submit_flag():
 @login_required
 def hints():
     team_name = session['team']
+    if not get_team_by_name(team_name):
+        session.clear()
+        flash('Team not found. Please log in again.', 'error')
+        return redirect(url_for('index'))
     purchased = get_purchased_hints(team_name)
     total_cost = sum(h['cost'] for h in HINTS if h['id'] in purchased)
 
@@ -618,6 +622,10 @@ def hints():
 @limiter.limit("30 per minute")
 def buy_hint():
     team_name = session['team']
+    if not get_team_by_name(team_name):
+        session.clear()
+        flash('Team not found. Please log in again.', 'error')
+        return redirect(url_for('index'))
     try:
         hint_id = int(request.form.get('hint_id', 0))
     except (ValueError, TypeError):
