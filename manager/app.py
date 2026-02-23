@@ -321,14 +321,14 @@ def _flag_points(base: int, fb_mult: float, position: int) -> int:
 
 def _calc_score(team_name: str, flag_ids: set, capture_order: dict, hint_cost: int = 0) -> int:
     """Sum positional points for captured flags, subtract hint and name-reveal costs.
-    Score floor is 0."""
+    Score can go negative if deductions exceed points earned."""
     score = 0
     for f in FLAGS:
         if f['id'] in flag_ids:
             order    = capture_order.get(f['id'], [])
             position = order.index(team_name) + 1 if team_name in order else len(order) + 1
             score   += _flag_points(f['points'], f['fb_multiplier'], position)
-    return max(0, score - hint_cost)
+    return score - hint_cost
 
 
 def get_scoreboard() -> list:
@@ -799,9 +799,14 @@ def scoreboard():
             series.append({'x': _ts_to_ms(ts), 'y': score})
         graph_data[team_name] = series
 
+    # Actual min/max across all data points — Y-axis scales to fit whatever teams score
+    all_y = [pt['y'] for series in graph_data.values() for pt in series]
+    graph_max = max(all_y, default=100)
+    graph_min = min(all_y, default=0)
+
     return render_template('scoreboard.html', board=board, flags=FLAGS,
                            max_score=MAX_SCORE, max_possible=MAX_POSSIBLE,
-                           graph_data=graph_data)
+                           graph_data=graph_data, graph_max=graph_max, graph_min=graph_min)
 
 # ---------------------------------------------------------------------------
 # Routes — admin

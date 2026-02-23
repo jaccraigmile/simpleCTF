@@ -110,7 +110,6 @@
       borderColor:     COLORS[i % COLORS.length],
       backgroundColor: COLORS[i % COLORS.length] + '18',
       fill:            false,
-      stepped:         'before',
       tension:         0,
       pointRadius:     3,
       pointHoverRadius: 6,
@@ -141,13 +140,13 @@
           }
         },
         y: {
-          min: 0, max: {{ max_possible }},
+          suggestedMin: {{ graph_min }},
+          suggestedMax: {{ graph_max }},
           grid:   { color: '#142030' },
           border: { color: '#1c3048' },
           ticks: {
             color: '#375570',
             font: { family: "'JetBrains Mono', 'Courier New'", size: 11 },
-            stepSize: 100,
           }
         }
       },
