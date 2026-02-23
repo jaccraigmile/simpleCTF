@@ -57,10 +57,15 @@
     <a href="#">Read more →</a>
   </div>
   <div class="news-item">
-    <h3>🏆 Awarded “Best FinTech Innovator”</h3>
+    <h3>🏆 Awarded "Best FinTech Innovator"</h3>
     <p class="muted">August 28, 2025</p>
     <p>Recognized at the International FinTech Awards for excellence in AI‑driven compliance solutions.</p>
     <a href="#">Read more →</a>
+  </div>
+  <div class="news-item">
+    <h3>👋 Welcome to the Team, Alicia Johnson!</h3>
+    <p class="muted">January 6, 2026</p>
+    <p>We're thrilled to welcome Alicia Johnson to the BankingAI Cloud family. Alicia joins us in the Finance department as our newest Accountant. Welcome aboard!</p>
   </div>
 </div>
 

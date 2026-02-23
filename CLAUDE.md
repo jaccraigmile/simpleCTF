@@ -78,7 +78,7 @@ The CTF is a PHP employee portal ("BankingAI Cloud") backed by MySQL. Only port 
 | `FLAG_FILE_UPLOAD` | Written to `/flag.txt` at container start (via `web/Dockerfile` CMD) |
 
 **Intended exploit chain:**
-1. `robots.txt` → `/staff-resources/new-employee-guide.txt` → credentials `ajohnson:Staff@2024`
+1. `robots.txt` → `/staff-resources/new-employee-guide.txt` → credentials `ajohnson:Staff@2026`
 2. Login → `dashboard.php` shows `FLAG_LOGIN`
 3. `lookup.php` SQL injection (unsanitised `WHERE full_name LIKE '%$search%'`) → dump `users` table → get `FLAG_SQL_INJECTION` and admin password hash
 4. Login as admin → `admin_subnav.php` shows `FLAG_USER_ESCALATION`

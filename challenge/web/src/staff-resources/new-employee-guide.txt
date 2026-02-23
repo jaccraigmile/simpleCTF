@@ -6,7 +6,7 @@ Welcome to the team! Please log in to the employee portal at your earliest conve
 Your default credentials are:
 
   Username : ajohnson
-  Password : Staff@2024
+  Password : Staff@2026
 
 You will be prompted to change your password after your first login.
 
