@@ -85,7 +85,7 @@
   {% set visible = flag_hints[fid] %}
   {% if visible %}
   <div class="hint-group">
-    <h2>{{ flag.name }}
+    <h2>{% if fid in revealed_names %}{{ flag.name }}{% else %}Flag {{ loop.index }}{% endif %}
       <span class="muted" style="font-size:.65em;font-family:var(--mono);font-weight:400;">
         {{ flag.points }} pts
       </span>

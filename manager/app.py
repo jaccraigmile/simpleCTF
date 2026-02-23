@@ -670,11 +670,13 @@ def hints():
                 visible.append(h)
         flag_hints[fid] = visible
 
+    revealed_names = get_revealed_names(team_name)
     return render_template('hints.html',
                            flags=FLAGS,
                            flag_hints=flag_hints,
                            purchased=purchased,
-                           total_cost=total_cost)
+                           total_cost=total_cost,
+                           revealed_names=revealed_names)
 
 
 @app.route('/hints/buy', methods=['POST'])
