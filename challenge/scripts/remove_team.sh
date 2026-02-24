@@ -27,12 +27,22 @@ docker compose \
 echo "Team '$TEAM' Docker instance removed."
 
 # ── Manager DB cleanup ───────────────────────────────────────────────────────
-if [[ -f "$MANAGER_DB" ]] && command -v sqlite3 &>/dev/null; then
-    sqlite3 "$MANAGER_DB" \
-        "DELETE FROM hint_purchases WHERE team_name='${TEAM}';
-         DELETE FROM submissions   WHERE team_name='${TEAM}';
-         DELETE FROM teams         WHERE name='${TEAM}';"
-    echo "Team '$TEAM' removed from manager DB."
+if [[ ! -f "$MANAGER_DB" ]]; then
+    echo "Warning: manager DB not found at $MANAGER_DB — manager DB unchanged."
+elif ! command -v python3 &>/dev/null; then
+    echo "Warning: python3 not available — manager DB unchanged."
 else
-    echo "Warning: manager DB not found or sqlite3 unavailable — manager DB unchanged."
+    MANAGER_DB="$MANAGER_DB" TEAM_NAME="$TEAM" python3 - <<'PYEOF'
+import os, sqlite3
+db   = os.environ['MANAGER_DB']
+team = os.environ['TEAM_NAME']
+conn = sqlite3.connect(db)
+conn.execute("DELETE FROM hint_purchases WHERE team_name = ?", (team,))
+conn.execute("DELETE FROM name_purchases WHERE team_name = ?", (team,))
+conn.execute("DELETE FROM submissions    WHERE team_name = ?", (team,))
+conn.execute("DELETE FROM teams          WHERE name = ?",      (team,))
+conn.commit()
+conn.close()
+PYEOF
+    echo "Team '$TEAM' removed from manager DB."
 fi

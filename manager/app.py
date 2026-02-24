@@ -919,8 +919,10 @@ def admin_delete(team_name):
     ).start()
 
     with get_db() as db:
-        db.execute('DELETE FROM submissions WHERE team_name = ?', (team_name,))
-        db.execute('DELETE FROM teams WHERE name = ?', (team_name,))
+        db.execute('DELETE FROM submissions     WHERE team_name = ?', (team_name,))
+        db.execute('DELETE FROM hint_purchases  WHERE team_name = ?', (team_name,))
+        db.execute('DELETE FROM name_purchases  WHERE team_name = ?', (team_name,))
+        db.execute('DELETE FROM teams           WHERE name = ?',      (team_name,))
         db.commit()
 
     flash(f'Team "{team_name}" deleted.', 'info')
