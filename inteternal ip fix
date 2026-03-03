@@ -1,0 +1,42 @@
+● This is a config change on the VM, not in the repo. Here's exactly what to run:
+
+  1. Create/edit /etc/docker/daemon.json on the VM:
+
+  sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+  {
+    "default-address-pools": [
+      {"base": "192.168.128.0/17", "size": 24}
+    ],
+    "bip": "192.168.127.1/24"
+  }
+  EOF
+
+  - default-address-pools — all new compose project networks get addresses from 192.168.128.x – 192.168.255.x, far away
+  from your 172.16.0.x host network
+  - bip — the docker0 bridge itself (the daemon's default bridge) gets 192.168.127.1/24
+  - /17 base with /24 size gives Docker 128 possible team networks — plenty
+
+  2. Purge all existing stale networks (from step before):
+
+  docker network ls --filter 'name=ctf_' --format '{{.ID}}' \
+    | xargs -r docker network rm 2>/dev/null || true
+
+  3. Restart Docker:
+
+  sudo systemctl restart docker
+
+  4. Verify the new bridge range:
+
+  docker network inspect bridge | grep Subnet
+  # Should show: 192.168.127.0/24
+
+  ip addr show docker0
+  # Should show: 192.168.127.1/24
+
+  5. Confirm host route table looks clean:
+
+  ip route show | grep '172.16'
+  # Should only show your VM's own NIC route, nothing from Docker
+
+  After this, spawn a test team container and confirm ip route show still only has the one 172.16.0.x route for the host
+   NIC.
